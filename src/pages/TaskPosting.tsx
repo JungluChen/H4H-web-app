@@ -1,22 +1,26 @@
 import React, { useState, CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTaskStore } from '../store/taskStore';
-import DemoDisclaimer from '../components/DemoDisclaimer';
 import LocationPicker from '../components/LocationPicker';
 
 interface FormData {
   title: string;
   category: string;
-  price: string;
   time: string;
   location: string;
   description: string;
+  price: string;
   selectedDays: string[];
   startTime: string;
   endTime: string;
-  language: string;
   country: string;
-  [key: string]: string | string[];
+  language: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  flag?: string;
+  [key: string]: string | string[] | { lat: number; lng: number; } | undefined;
 }
 
 const hideScrollbarStyle: CSSProperties = {
@@ -95,6 +99,18 @@ const COUNTRIES = [
   { code: 'VN', name: 'Vietnam', flag: '🇻🇳' }
 ].sort((a, b) => a.name.localeCompare(b.name));
 
+// Add default coordinates for common locations
+const locationCoordinates: { [key: string]: { lat: number, lng: number } } = {
+  'Taipei': { lat: 25.0330, lng: 121.5654 },
+  'Taichung': { lat: 24.1473, lng: 120.6780 },
+  'Kaohsiung': { lat: 22.6273, lng: 120.3014 },
+  'Tainan': { lat: 22.9997, lng: 120.2270 },
+  'Hsinchu': { lat: 24.8138, lng: 120.9675 },
+  'Keelung': { lat: 25.1276, lng: 121.7392 },
+  // Default to Taipei Main Station if location not found
+  'default': { lat: 25.0478, lng: 121.5170 }
+};
+
 const TaskPosting = () => {
   const navigate = useNavigate();
   const addTask = useTaskStore((state) => state.addTask);
@@ -109,9 +125,17 @@ const TaskPosting = () => {
     startTime: '',
     endTime: '',
     language: 'English',
-    country: ''
+    country: '',
+    flag: 'us'
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,13 +163,18 @@ const TaskPosting = () => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Get coordinates based on location or use default
+    const cityName = formData.location.split(',')[0].trim();
+    const coordinates = locationCoordinates[cityName] || locationCoordinates.default;
+
     addTask({
       ...formData,
       price: Number(formData.price),
       postedBy: 'User',
       language: formData.language || 'English',
       flag: 'us',
-      status: 'open'
+      status: 'open',
+      coordinates: coordinates // Add coordinates to the task
     });
     
     setIsLoading(false);
@@ -187,242 +216,250 @@ const TaskPosting = () => {
     { code: 'vi', name: 'Vietnamese', flag: '🇻🇳' }
   ].sort((a, b) => a.name.localeCompare(b.name));
 
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedLang = LANGUAGES.find(lang => 
+      lang.name.toLowerCase() === e.target.value.toLowerCase()
+    );
+    setFormData({
+      ...formData,
+      language: e.target.value,
+      flag: selectedLang?.flag || 'us'
+    });
+  };
+
+  const handleCountryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedCountry = COUNTRIES.find(country => 
+      country.name.toLowerCase() === e.target.value.toLowerCase()
+    );
+    setFormData({
+      ...formData,
+      country: e.target.value,
+      flag: selectedCountry?.flag || '🌐'
+    });
+  };
+
+  const renderFormField = (field: keyof FormData) => {
+    // Define unified colors
+    const colors = {
+      background: '#222',
+      text: 'white',
+      border: '#333',
+      label: '#000080'
+    };
+
+    const commonInputStyle: React.CSSProperties = {
+      width: '100%',
+      padding: '10px',
+      borderRadius: '5px',
+      border: `1px solid ${colors.border}`,
+      fontSize: '16px',
+      boxSizing: 'border-box' as const,
+      backgroundColor: colors.background,
+      color: colors.text
+    };
+
+    switch (field) {
+      case 'description':
+        return (
+          <textarea
+            value={formData[field] as string}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            style={{
+              ...commonInputStyle,
+              height: '100px',
+              resize: 'vertical'
+            } as React.CSSProperties}
+          />
+        );
+      case 'category':
+        return (
+          <select
+            value={formData[field] as string}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            style={commonInputStyle}
+          >
+            <option value="" style={{ backgroundColor: colors.background }}>Select a category</option>
+            {CATEGORIES.map(cat => (
+              <option key={cat} value={cat} style={{ backgroundColor: colors.background }}>{cat}</option>
+            ))}
+          </select>
+        );
+      case 'time':
+        return (
+          <div>
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                {DAYS.map(day => (
+                  <button
+                    type="button"
+                    key={day}
+                    onClick={() => {
+                      const newDays = formData.selectedDays.includes(day)
+                        ? formData.selectedDays.filter(d => d !== day)
+                        : [...formData.selectedDays, day];
+                      setFormData({
+                        ...formData,
+                        selectedDays: newDays,
+                        time: `${newDays.join(', ')} ${formData.startTime}-${formData.endTime}`
+                      });
+                    }}
+                    style={{
+                      padding: '5px 10px',
+                      backgroundColor: formData.selectedDays.includes(day) ? '#007AFF' : '#333',
+                      border: 'none',
+                      borderRadius: '5px',
+                      color: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  startTime: e.target.value,
+                  time: `${formData.selectedDays.join(', ')} ${e.target.value}-${formData.endTime}`
+                })}
+                style={{
+                  ...commonInputStyle,
+                  flex: 1
+                }}
+              />
+              <span style={{ alignSelf: 'center', color: colors.text }}>-</span>
+              <input
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  endTime: e.target.value,
+                  time: `${formData.selectedDays.join(', ')} ${formData.startTime}-${e.target.value}`
+                })}
+                style={{
+                  ...commonInputStyle,
+                  flex: 1
+                }}
+              />
+            </div>
+          </div>
+        );
+      case 'location':
+        return (
+          <LocationPicker
+            onLocationSelect={(location) => setFormData({
+              ...formData,
+              location
+            })}
+          />
+        );
+      case 'language':
+      case 'country':
+        return (
+          <div style={{ position: 'relative' }}>
+            <input
+              list={field === 'language' ? 'languages' : 'countries'}
+              value={formData[field] as string}
+              onChange={field === 'language' ? handleLanguageChange : handleCountryChange}
+              placeholder={`Type or select a ${field}...`}
+              style={commonInputStyle}
+            />
+            <datalist id={field === 'language' ? 'languages' : 'countries'}>
+              {(field === 'language' ? LANGUAGES : COUNTRIES).map(item => (
+                <option key={item.code} value={item.name}>
+                  {item.name} {item.flag}
+                </option>
+              ))}
+            </datalist>
+          </div>
+        );
+      default:
+        return (
+          <input
+            type={field === 'price' ? 'number' : 'text'}
+            value={formData[field] as string}
+            onChange={(e) => handleInputChange(field, e.target.value)}
+            style={commonInputStyle}
+          />
+        );
+    }
+  };
+
   return (
     <div 
       className="hide-scrollbar"
-      style={hideScrollbarStyle}
+      style={{
+        ...hideScrollbarStyle,
+        position: 'relative',
+        height: 'calc(100vh - 120px)',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingBottom: '0'
+      }}
     >
-      <DemoDisclaimer />
-      <form onSubmit={handleSubmit}>
-        {Object.keys(formData)
-          .filter(field => !['selectedDays', 'startTime', 'endTime'].includes(field))
-          .map((field) => (
-            <div key={field} style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', textTransform: 'capitalize' }}>
-                {field} {field === 'price' && '💰'}
-                {field === 'location' && '📍'}
-                {field === 'time' && '⏰'}
-              </label>
-              {field === 'category' ? (
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    category: e.target.value
-                  })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    border: '1px solid #333',
-                    backgroundColor: '#222',
-                    color: 'white'
-                  }}
-                >
-                  <option value="">Select a category</option>
-                  {CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              ) : field === 'description' ? (
-                <textarea
-                  value={formData[field]}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    [field]: e.target.value
-                  })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    border: '1px solid #333',
-                    backgroundColor: '#222',
-                    color: 'white',
-                    minHeight: '100px',
-                    resize: 'vertical'
-                  }}
-                />
-              ) : field === 'time' ? (
-                <div>
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                      {DAYS.map(day => (
-                        <button
-                          type="button"
-                          key={day}
-                          onClick={() => {
-                            const newDays = formData.selectedDays.includes(day)
-                              ? formData.selectedDays.filter(d => d !== day)
-                              : [...formData.selectedDays, day];
-                            setFormData({
-                              ...formData,
-                              selectedDays: newDays,
-                              time: `${newDays.join(', ')} ${formData.startTime}-${formData.endTime}`
-                            });
-                          }}
-                          style={{
-                            padding: '5px 10px',
-                            backgroundColor: formData.selectedDays.includes(day) ? '#007AFF' : '#333',
-                            border: 'none',
-                            borderRadius: '5px',
-                            color: 'white',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {day}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                      type="time"
-                      value={formData.startTime}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        startTime: e.target.value,
-                        time: `${formData.selectedDays.join(', ')} ${e.target.value}-${formData.endTime}`
-                      })}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        backgroundColor: '#222',
-                        border: '1px solid #333',
-                        borderRadius: '5px',
-                        color: 'white'
-                      }}
-                    />
-                    <span style={{ alignSelf: 'center' }}>-</span>
-                    <input
-                      type="time"
-                      value={formData.endTime}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        endTime: e.target.value,
-                        time: `${formData.selectedDays.join(', ')} ${formData.startTime}-${e.target.value}`
-                      })}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        backgroundColor: '#222',
-                        border: '1px solid #333',
-                        borderRadius: '5px',
-                        color: 'white'
-                      }}
-                    />
-                  </div>
+      <div style={{ 
+        padding: '0',
+        width: '100%',
+        maxWidth: '390px'
+      }}>
+        <form onSubmit={handleSubmit}>
+          {Object.keys(formData)
+            .filter(field => !['selectedDays', 'startTime', 'endTime', 'flag'].includes(field))
+            .map((field) => (
+              <div key={field} style={{ 
+                marginBottom: '15px',
+                width: '100%'
+              }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '5px', 
+                  textTransform: 'capitalize',
+                  color: '#000080',
+                  fontWeight: 'bold',
+                  width: '100%'
+                }}>
+                  {field}
+                  {field === 'price' && ' 💰'}
+                  {field === 'location' && ' 📍'}
+                  {field === 'time' && ' ⏰'}
+                </label>
+                <div style={{ width: '100%' }}>
+                  {renderFormField(field as keyof FormData)}
                 </div>
-              ) : field === 'location' ? (
-                <LocationPicker
-                  onLocationSelect={(location) => setFormData({
-                    ...formData,
-                    location
-                  })}
-                />
-              ) : field === 'language' ? (
-                <div style={{ position: 'relative' }}>
-                  <input
-                    list="languages"
-                    value={formData.language}
-                    onChange={(e) => {
-                      const selectedLang = LANGUAGES.find(lang => 
-                        lang.name.toLowerCase() === e.target.value.toLowerCase()
-                      );
-                      setFormData({
-                        ...formData,
-                        language: e.target.value,
-                        flag: selectedLang?.flag || 'us'
-                      });
-                    }}
-                    placeholder="Type or select a language..."
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      borderRadius: '5px',
-                      border: '1px solid #333',
-                      backgroundColor: '#222',
-                      color: 'white'
-                    }}
-                  />
-                  <datalist id="languages">
-                    {LANGUAGES.map(lang => (
-                      <option key={lang.code} value={lang.name}>
-                        {lang.name} {lang.flag}
-                      </option>
-                    ))}
-                  </datalist>
-                </div>
-              ) : field === 'country' ? (
-                <div style={{ position: 'relative' }}>
-                  <input
-                    list="countries"
-                    value={formData.country}
-                    onChange={(e) => {
-                      const selectedCountry = COUNTRIES.find(country => 
-                        country.name.toLowerCase() === e.target.value.toLowerCase()
-                      );
-                      setFormData({
-                        ...formData,
-                        country: e.target.value,
-                        flag: selectedCountry?.flag || '🌐'
-                      });
-                    }}
-                    placeholder="Type or select a country..."
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      borderRadius: '5px',
-                      border: '1px solid #333',
-                      backgroundColor: '#222',
-                      color: 'white'
-                    }}
-                  />
-                  <datalist id="countries">
-                    {COUNTRIES.map(country => (
-                      <option key={country.code} value={country.name}>
-                        {country.name} {country.flag}
-                      </option>
-                    ))}
-                  </datalist>
-                </div>
-              ) : (
-                <input
-                  required
-                  type={field === 'price' ? 'number' : 'text'}
-                  value={formData[field]}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    [field]: e.target.value
-                  })}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '5px',
-                    border: '1px solid #333',
-                    backgroundColor: '#222',
-                    color: 'white'
-                  }}
-                />
-              )}
-            </div>
-          ))}
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '15px',
-            backgroundColor: isLoading ? '#666' : '#007AFF',
-            border: 'none',
-            borderRadius: '5px',
-            color: 'white',
-            fontSize: '16px',
-            cursor: isLoading ? 'not-allowed' : 'pointer'
-          }}
-        >
-          {isLoading ? 'Posting... ⏳' : 'POST 📝'}
-        </button>
-      </form>
+              </div>
+            ))}
+
+          <div style={{
+            marginTop: '0',
+            marginBottom: '0',
+            width: '100%'
+          }}>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={isLoading}
+              style={{
+                width: '100%',
+                padding: '15px',
+                backgroundColor: isLoading ? '#666' : '#000080',
+                border: 'none',
+                borderRadius: '5px',
+                color: 'white',
+                fontSize: '16px',
+                cursor: isLoading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isLoading ? 'Posting... ⏳' : 'POST 📝'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

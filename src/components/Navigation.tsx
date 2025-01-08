@@ -11,12 +11,12 @@ const Navigation = () => {
       bottom: 0,
       width: '100%',
       maxWidth: '430px',
-      height: '60px',
-      backgroundColor: '#000',
+      backgroundColor: '#f0f0f0',
       display: 'flex',
       justifyContent: 'space-around',
-      alignItems: 'center',
-      borderTop: '1px solid #333'
+      padding: '10px 0',
+      zIndex: 1000,
+      borderTop: '1px solid #000080'
     }}>
       <button 
         onClick={() => navigate('/achievements')}

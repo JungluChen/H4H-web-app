@@ -8,29 +8,42 @@ import PersonalInfo from './pages/PersonalInfo';
 import TaskPosting from './pages/TaskPosting';
 import Achievements from './pages/Achievements';
 import Navigation from './components/Navigation';
+import ScrollContainer from './components/ScrollContainer';
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="app-container" style={{
+    <div style={{ 
+      backgroundColor: '#f5f5f5',
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center'
+    }}>
+      <div style={{
+        width: '100%',
         maxWidth: '430px',
+        backgroundColor: '#f5f5f5',
+        position: 'relative',
+        height: '100vh',
         margin: '0 auto',
-        minHeight: '100vh',
-        backgroundColor: '#000',
-        position: 'relative'
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-        <TopBar />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/chat" element={<ChatRoom />} />
-          <Route path="/tasks" element={<TaskBrowsing />} />
-          <Route path="/profile" element={<PersonalInfo />} />
-          <Route path="/post" element={<TaskPosting />} />
-          <Route path="/achievements" element={<Achievements />} />
-        </Routes>
-        <Navigation />
+        <BrowserRouter>
+          <TopBar />
+          <ScrollContainer>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/chat" element={<ChatRoom />} />
+              <Route path="/tasks" element={<TaskBrowsing />} />
+              <Route path="/profile" element={<PersonalInfo />} />
+              <Route path="/post" element={<TaskPosting />} />
+              <Route path="/achievements" element={<Achievements />} />
+            </Routes>
+          </ScrollContainer>
+          <Navigation />
+        </BrowserRouter>
       </div>
-    </BrowserRouter>
+    </div>
   );
 }
 

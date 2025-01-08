@@ -1,6 +1,6 @@
 import React from 'react';
-import { Task } from '../types';
 import { useNavigate } from 'react-router-dom';
+import { Task, Chat } from '../types';
 import { useTaskStore } from '../store/taskStore';
 
 interface TaskDetailsProps {
@@ -12,124 +12,96 @@ const TaskDetails = ({ task, onClose }: TaskDetailsProps) => {
   const navigate = useNavigate();
   const addChat = useTaskStore(state => state.addChat);
 
-  const handleContactClick = () => {
-    const chats = useTaskStore.getState().chats;
-    
-    // Check if a chat for this task already exists
-    const existingChat = chats.find(chat => 
-      chat.sender === task.postedBy && 
-      chat.taskTitle === task.title
-    );
+  const formatTime = (date: Date) => {
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
 
-    if (existingChat) {
-      // If chat exists, just navigate to it
-      onClose();
-      navigate('/chat', { state: { initialChat: existingChat } });
-      return;
-    }
-
-    // If no existing chat, create a new one
-    const newChat = {
-      id: `chat-${Date.now()}`,
+  const handleChat = () => {
+    const newChat: Chat = {
+      id: String(Date.now()),
       sender: task.postedBy,
       taskTitle: task.title,
-      message: `Hi, I'm interested in helping with "${task.title}"`,
-      timestamp: new Date().toLocaleTimeString(),
-      unreadCount: 1
+      message: task.description,
+      timestamp: formatTime(new Date()),
+      language: task.language,
+      unreadCount: 0
     };
-
-    // Add the chat to the store
-    addChat(newChat);
-
-    // Close the task details modal
+    
+    const { createdChat } = addChat(newChat);
+    
+    // Close the dialog and navigate to chat
     onClose();
-
-    // Navigate to chat room and initialize the chat immediately
-    navigate('/chat', { state: { initialChat: newChat } });
+    navigate('/chat', { state: { initialChat: createdChat, isNewChat: true } });
   };
 
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000,
-      padding: '20px'
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      backgroundColor: '#fff',
+      padding: '20px',
+      borderRadius: '10px',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+      maxWidth: '90%',
+      width: '400px',
+      maxHeight: '90vh',
+      overflowY: 'auto',
+      zIndex: 1000
     }}>
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          right: '10px',
+          top: '10px',
+          fontSize: '20px',
+          color: '#666',
+          padding: '5px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+      >
+        ✕
+      </button>
+
+      <h2 style={{ margin: '0 0 15px 0', paddingRight: '30px' }}>{task.title}</h2>
+      <p style={{ margin: '0 0 10px 0', color: '#666' }}>{task.description}</p>
+      
+      <div style={{ marginBottom: '15px' }}>
+        <div>💰 {task.price} NTD</div>
+        <div>🕒 {task.time}</div>
+        <div>📍 {task.location}</div>
+        <div>👤 {task.postedBy}</div>
+        <div>🌐 {task.language}</div>
+      </div>
+
       <div style={{
-        backgroundColor: '#222',
-        borderRadius: '10px',
-        padding: '20px',
-        width: '100%',
-        maxWidth: '400px',
-        maxHeight: '80vh',
-        overflowY: 'auto',
-        position: 'relative'
+        display: 'flex',
+        justifyContent: 'center',
+        marginTop: '20px'
       }}>
         <button
-          onClick={onClose}
+          onClick={handleChat}
           style={{
-            position: 'absolute',
-            right: '10px',
-            top: '10px',
-            fontSize: '20px',
-            background: 'none',
-            border: 'none',
-            color: 'white',
-            cursor: 'pointer'
-          }}
-        >
-          ✕
-        </button>
-
-        <h2 style={{ marginTop: '0', color: 'white' }}>{task.title}</h2>
-        
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ color: '#FFD700', fontSize: '24px', marginBottom: '10px' }}>
-            💰 ${task.price}
-          </div>
-          <div style={{ color: '#999', marginBottom: '5px' }}>
-            📂 Category: {task.category}
-          </div>
-          <div style={{ color: '#999', marginBottom: '5px' }}>
-            ⏰ Time: {task.time}
-          </div>
-          <div style={{ color: '#999', marginBottom: '5px' }}>
-            📍 Location: {task.location}
-          </div>
-          <div style={{ color: '#999', marginBottom: '5px' }}>
-            👤 Posted by: {task.postedBy}
-          </div>
-          <div style={{ color: '#999', marginBottom: '5px' }}>
-            🌐 Language: {task.language} {task.flag === 'us' ? '🇺🇸' : task.flag === 'jp' ? '🇯🇵' : '🌐'}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <h3 style={{ color: 'white', marginBottom: '10px' }}>Description</h3>
-          <p style={{ color: '#999' }}>{task.description || 'No description provided.'}</p>
-        </div>
-
-        <button
-          onClick={handleContactClick}
-          style={{
-            width: '100%',
-            padding: '15px',
+            padding: '10px 30px',
             backgroundColor: '#007AFF',
+            color: '#fff',
             border: 'none',
             borderRadius: '5px',
-            color: 'white',
-            fontSize: '16px',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            fontSize: '16px'
           }}
         >
-          Contact Task Poster 💬
+          Contact Now
         </button>
       </div>
     </div>

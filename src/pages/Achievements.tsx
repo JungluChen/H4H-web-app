@@ -1,6 +1,5 @@
 import React from 'react';
 import { dummyAchievements } from '../data/dummyData';
-import DemoDisclaimer from '../components/DemoDisclaimer';
 
 const achievementIcons = {
   'Promotion Master': '🌟',
@@ -17,8 +16,6 @@ const Achievements = () => {
 
   return (
     <div style={{ padding: '20px', color: 'white' }}>
-      <DemoDisclaimer />
-      
       <div style={{ 
         backgroundColor: '#222',
         padding: '20px',

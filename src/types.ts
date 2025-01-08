@@ -7,18 +7,29 @@ export interface Task {
   location: string;
   description: string;
   postedBy: string;
-  status: 'open' | 'in-progress' | 'completed';
   language: string;
   flag: string;
+  coordinates: { lat: number; lng: number };
+  status: string;
 }
 
-export interface ChatMessage {
+export interface Chat {
   id: string;
-  sender: string;
-  taskTitle: string;
   message: string;
+  sender: string;
   timestamp: string;
+  taskTitle: string;
+  language: string;
   unreadCount: number;
+}
+
+export interface TopList {
+  title: string;
+  date: string;
+  items: string[];
+  thumbnail: string;
+  category?: string;
+  locations?: { name: string; coordinates: { lat: number; lng: number } }[];
 }
 
 export interface Achievement {
@@ -27,12 +38,7 @@ export interface Achievement {
   progress: number;
   reward: number;
   icon: string;
-}
-
-export interface TopList {
-  title: string;
-  date: string;
-  items: string[];
+  id: string;
 }
 
 export interface UserProfile {
